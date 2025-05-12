@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cebimde FCM Bildirim Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    h1, h2 {
+      color: #2c3e50;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    input, textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    textarea {
+      height: 100px;
+    }
+    
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    button:hover {
+      background-color: #2980b9;
+    }
+    
+    .response {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+      border-left: 4px solid #3498db;
+      white-space: pre-wrap;
+    }
+    
+    .error {
+      border-left-color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+  <h1>Cebimde FCM Bildirim Test</h1>
+  
+  <div class="form-group">
+    <label for="token">JWT Token (Kullanıcı Girişi için):</label>
+    <input type="text" id="token" placeholder="eyJhbGciOiJIUzI1NiIsIn...">
+  </div>
+  
+  <h2>FCM Token Gönderme</h2>
+  <div class="form-group">
+    <label for="fcmToken">FCM Token:</label>
+    <input type="text" id="fcmToken" placeholder="Firebase'den alınan FCM token">
+  </div>
+  
+  <button onclick="updateFCMToken()">FCM Token Güncelle</button>
+  <div id="fcmTokenResponse" class="response" style="display:none"></div>
+  
+  <h2>Bildirim Gönderme</h2>
+  <div class="form-group">
+    <label for="notificationTitle">Bildirim Başlığı:</label>
+    <input type="text" id="notificationTitle" placeholder="Bildirim Başlığı">
+  </div>
+  
+  <div class="form-group">
+    <label for="notificationBody">Bildirim İçeriği:</label>
+    <textarea id="notificationBody" placeholder="Bildirim mesajını buraya yazın..."></textarea>
+  </div>
+  
+  <div class="form-group">
+    <label for="notificationData">Özel Veri (JSON):</label>
+    <textarea id="notificationData">{
+  "type": "payment",
+  "paymentId": "123"
+}</textarea>
+  </div>
+  
+  <button onclick="sendNotification()">Bildirim Gönder</button>
+  <div id="notificationResponse" class="response" style="display:none"></div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:5000/api';
+    
+    // FCM Token Güncelleme
+    async function updateFCMToken() {
+      const jwtToken = document.getElementById('token').value;
+      const fcmToken = document.getElementById('fcmToken').value;
+      const responseElement = document.getElementById('fcmTokenResponse');
+      
+      if (!jwtToken || !fcmToken) {
+        responseElement.textContent = 'Hata: JWT Token ve FCM Token gerekli!';
+        responseElement.classList.add('error');
+        responseElement.style.display = 'block';
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/fcm-token`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwtToken}`
+          },
+          body: JSON.stringify({ token: fcmToken })
+        });
+        
+        const data = await response.json();
+        responseElement.textContent = JSON.stringify(data, null, 2);
+        responseElement.classList.remove('error');
+        responseElement.style.display = 'block';
+      } catch (error) {
+        responseElement.textContent = `Hata: ${error.message}`;
+        responseElement.classList.add('error');
+        responseElement.style.display = 'block';
+      }
+    }
+    
+    // Bildirim Gönderme
+    async function sendNotification() {
+      const jwtToken = document.getElementById('token').value;
+      const fcmToken = document.getElementById('fcmToken').value;
+      const title = document.getElementById('notificationTitle').value;
+      const body = document.getElementById('notificationBody').value;
+      let data = {};
+      
+      try {
+        data = JSON.parse(document.getElementById('notificationData').value);
+      } catch (e) {
+        console.error('Geçersiz JSON formatı:', e);
+      }
+      
+      const responseElement = document.getElementById('notificationResponse');
+      
+      if (!jwtToken || !fcmToken || !title || !body) {
+        responseElement.textContent = 'Hata: JWT Token, FCM Token, başlık ve içerik gerekli!';
+        responseElement.classList.add('error');
+        responseElement.style.display = 'block';
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/notifications/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwtToken}`
+          },
+          body: JSON.stringify({
+            token: fcmToken,
+            title,
+            body,
+            data
+          })
+        });
+        
+        const result = await response.json();
+        responseElement.textContent = JSON.stringify(result, null, 2);
+        responseElement.classList.remove('error');
+        responseElement.style.display = 'block';
+      } catch (error) {
+        responseElement.textContent = `Hata: ${error.message}`;
+        responseElement.classList.add('error');
+        responseElement.style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html> 
