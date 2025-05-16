@@ -44,6 +44,11 @@ const User = sequelize.define('User', {
     type: DataTypes.BOOLEAN,
     defaultValue: true
   },
+  // Admin yetkisi
+  isAdmin: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
   // Bildirim tercihleri
   enableNotifications: {
     type: DataTypes.BOOLEAN,
@@ -64,6 +69,10 @@ const User = sequelize.define('User', {
   enableFirebaseNotifications: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
+  },
+  firebaseAccessToken: {
+    type: DataTypes.TEXT,
+    allowNull: true
   }
 }, {
   timestamps: true,

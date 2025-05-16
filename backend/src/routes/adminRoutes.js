@@ -1,21 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
-const { protect } = require('../middleware/authMiddleware');
+const authMiddleware = require('../middlewares/auth');
+const adminMiddleware = require('../middlewares/admin');
 
-// Admin yetkisi kontrolü middleware'i
-const isAdmin = (req, res, next) => {
-  if (req.user && req.user.isAdmin) {
-    next();
-  } else {
-    res.status(403).json({ message: 'Admin yetkisi gerekli' });
-  }
-};
+// Tüm admin rotaları için auth ve admin middleware'lerini kullan
+router.use(authMiddleware, adminMiddleware);
 
-// Notifikasyon endpointleri - Korumalı ve admin gerektirir
-router.get('/notifications/access-token', protect, isAdmin, adminController.getAccessToken);
-router.post('/notifications/broadcast', protect, isAdmin, adminController.sendNotificationToAllUsers);
-router.post('/notifications/user', protect, isAdmin, adminController.sendNotificationToUser);
-router.post('/notifications/upcoming-payments', protect, isAdmin, adminController.sendReminderForUpcomingPayments);
+// Firebase Access Token endpoint'i
+router.get('/token', adminController.getAccessToken);
+
+// Diğer admin bildirim endpointleri
+router.post('/notifications/broadcast', adminController.sendNotificationToAllUsers);
+router.post('/notifications/user', adminController.sendNotificationToUser);
+router.post('/notifications/upcoming-payments', adminController.sendReminderForUpcomingPayments);
+
+// Test endpoint - Zamanlı bildirimleri test etmek için
+router.post('/test/payment-notifications', adminController.testPaymentNotifications);
 
 module.exports = router; 

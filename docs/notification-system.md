@@ -24,6 +24,45 @@ Firebase ile iletişim için gereken Auth Token'ı artık otomatik olarak:
 3. Başlangıçta otomatik olarak alınır
 4. 401 hata durumunda otomatik olarak yenilenir
 
+### Kullanıcı Access Token İşlemleri
+
+Uygulama artık kullanıcı giriş ve kayıt işlemleri sırasında hem FCM token hem de Firebase Access Token bilgilerini yönetir:
+
+1. Frontend'de `firebaseHelper.js` modülü ile tokenlar alınır
+2. `LoginScreen.tsx` ve `SignupScreen.tsx` içinde tokenlar backend'e gönderilir
+3. Backend'de `authController.js` gelen token bilgilerini User tablosuna kaydeder
+4. User modeli hem FCM token hem Firebase access token saklar
+5. İstenildiğinde admin panel üzerinden token bilgileri görüntülenebilir
+
+```javascript
+// Örnek login isteği
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "fcmToken": "d0d09NnJ84zXyD7AahRiB.APA91bFhKd35GAI0DUZGzo-zwCOpOnHYVD9tz3e4DSBj24I5gUIZhIrL60KOBKCTp0OeWiLzJHQJ0atyqNHoj2IdP-Y3D98uaa9BoG_Z8RZV5rIErIdAC8",
+  "firebaseAccessToken": "eyJhbGciOiJSUzI1NiIsI..."
+}
+```
+
+### Access Token Erişimi (Sadece Admin)
+
+Admin kullanıcılar için Firebase Access Token'ına erişim:
+
+```javascript
+// Admin API üzerinden token alma
+GET /api/admin/token
+
+// Başarılı yanıt
+{
+  "success": true,
+  "accessToken": "ya29.a0AfH6SMBmU...", // Firebase Access Token
+  "expiresIn": 3300,                     // Saniye cinsinden geçerlilik süresi
+  "expiresInMinutes": 55                 // Dakika cinsinden geçerlilik süresi
+}
+```
+
+⚠️ **Güvenlik Uyarısı**: Access token sadece admin kullanıcılar tarafından erişilebilir ve hassas bir bilgidir. Son kullanıcılara iletilmemelidir!
+
 ## Bildirim Gönderme
 
 Bildirimler üç şekilde gönderilebilir:

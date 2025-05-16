@@ -1,10 +1,11 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Backend API URL'i - Android Emülatör için
-const API_URL = 'http://10.0.2.2:5000/api';
-// Fiziksel cihaz için bilgisayarınızın IP adresini kullanın
-// const API_URL = 'http://192.168.1.X:5000/api';
+// Wi-Fi ağı içinde kullanım için (lokal geliştirme)
+const API_URL = 'http://192.168.0.4:5000/api'; // Bilgisayarınızın gerçek IP adresi
+
+// Geliştirme ortamı için alternatif URL'ler (ihtiyaca göre yorumdan çıkarın)
+// const API_URL = 'http://10.0.2.2:5000/api'; // Android Emülatör için
 
 // Axios instance oluşturma
 const axiosInstance = axios.create({
@@ -48,10 +49,27 @@ export const authService = {
         fcmToken: tokenToSend // FCM token'ı direkt gönder
       });
       
+      // Önemli: Backend'den dönen yanıt yapısını kontrol edelim
+      console.log('Register API yanıtı:', response.data);
+      
       // Token ve kullanıcı bilgilerini AsyncStorage'a kaydet
       if (response.data.token) {
         await AsyncStorage.setItem('token', response.data.token);
-        await AsyncStorage.setItem('user', JSON.stringify(response.data));
+        
+        // Backend'den gelen kullanıcı yapısına göre düzenleme
+        const userData = response.data.user || response.data;
+        console.log('Kaydedilecek kullanıcı verileri:', userData);
+        
+        await AsyncStorage.setItem('user', JSON.stringify(userData));
+        
+        // Token'ı da userData'ya ekleyip döndürelim
+        return {
+          ...response,
+          data: {
+            ...userData,
+            token: response.data.token
+          }
+        };
       }
       
       return response;
@@ -77,10 +95,27 @@ export const authService = {
         fcmToken: tokenToSend // FCM token'ı direkt gönder
       });
       
+      // Önemli: Backend'den dönen yanıt yapısını kontrol edelim
+      console.log('Login API yanıtı:', response.data);
+      
       // Token ve kullanıcı bilgilerini AsyncStorage'a kaydet
       if (response.data.token) {
         await AsyncStorage.setItem('token', response.data.token);
-        await AsyncStorage.setItem('user', JSON.stringify(response.data));
+        
+        // Backend'den gelen kullanıcı yapısına göre düzenleme
+        const userData = response.data.user || response.data;
+        console.log('Kaydedilecek kullanıcı verileri:', userData);
+        
+        await AsyncStorage.setItem('user', JSON.stringify(userData));
+        
+        // Token'ı da userData'ya ekleyip döndürelim
+        return {
+          ...response,
+          data: {
+            ...userData,
+            token: response.data.token
+          }
+        };
       }
       
       return response;

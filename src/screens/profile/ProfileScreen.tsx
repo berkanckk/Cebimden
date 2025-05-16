@@ -82,7 +82,10 @@ const ProfileScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
+              console.log('Çıkış yapılıyor...');
               await logout();
+              console.log('Çıkış yapıldı.');
+              // AuthContext içinde yapılacak çıkış işlemini bekleyin
             } catch (error) {
               console.error('Logout error:', error);
               Alert.alert('Hata', 'Çıkış yaparken bir hata oluştu.');

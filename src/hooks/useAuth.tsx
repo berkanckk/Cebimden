@@ -33,7 +33,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const token = await AsyncStorage.getItem('token');
 
       if (storedUser && token) {
-        setUser(JSON.parse(storedUser));
+        const userData = JSON.parse(storedUser);
+        console.log('Yüklenen kullanıcı verileri:', userData);
+        setUser(userData);
       }
     } catch (error) {
       console.error('Error loading stored user:', error);
@@ -54,9 +56,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       const response = await authService.register(email, password, name, phone, tokenToUse);
+      console.log('Register response:', response.data);
       
-      // API yanıtı şu yapıdadır: { id, name, email, phone, token }
-      setUser(response.data);
+      // API yanıtı ile kullanıcı verilerini ayarla
+      if (response.data) {
+        setUser(response.data);
+        console.log('Register sonrası user state:', response.data);
+      }
     } catch (error: any) {
       setError(error.response?.data?.message || 'Kayıt sırasında bir hata oluştu');
       console.error('Registration error:', error);
@@ -77,9 +83,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       const response = await authService.login(email, password, tokenToUse);
+      console.log('Login response:', response.data);
       
-      // API yanıtı şu yapıdadır: { id, name, email, phone, token }
-      setUser(response.data);
+      // API yanıtı ile kullanıcı verilerini ayarla
+      if (response.data) {
+        setUser(response.data);
+        console.log('Login sonrası user state:', response.data);
+      }
     } catch (error: any) {
       setError(error.response?.data?.message || 'Giriş sırasında bir hata oluştu');
       console.error('Login error:', error);
@@ -90,9 +100,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
+      console.log('Logout başlatıldı');
       setIsLoading(true);
-      await authService.logout();
+      
+      // Önce api servisi ile logout işlemini yap (başarısız olsa bile devam et)
+      try {
+        await authService.logout();
+        console.log('API logout başarılı');
+      } catch (error) {
+        console.error('API logout hatası:', error);
+      }
+      
+      // AsyncStorage'dan kullanıcı bilgilerini temizle
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
+      console.log('AsyncStorage temizlendi');
+      
+      // State'i temizle
       setUser(null);
+      console.log('Kullanıcı state temizlendi');
     } catch (error) {
       console.error('Logout error:', error);
     } finally {

@@ -2,6 +2,8 @@ import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messag
 import { Platform } from 'react-native';
 import { paymentService } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import notifee, { AndroidImportance } from '@notifee/react-native';
+import { createNotificationChannel } from './notifications';
 
 // FCM token alma ve güncelleme işlemi
 export const initializeFirebase = async () => {
@@ -59,7 +61,36 @@ export const initializeFirebase = async () => {
 export const setBackgroundMessageHandler = () => {
   messaging().setBackgroundMessageHandler(async (remoteMessage) => {
     console.log('Arka plan mesajı alındı:', remoteMessage);
-    // Burada gelen bildirimleri işleyebilirsiniz
+    
+    // Arka planda gelen bildirimleri notifee ile göster
+    try {
+      if (remoteMessage && (remoteMessage.notification || remoteMessage.data)) {
+        const channelId = await createNotificationChannel();
+        
+        await notifee.displayNotification({
+          title: remoteMessage.notification?.title || 'Cebimde Bildirimi',
+          body: remoteMessage.notification?.body || 'Yeni bir bildiriminiz var',
+          android: {
+            channelId: 'payment_reminders',
+            importance: AndroidImportance.HIGH,
+            pressAction: {
+              id: 'default',
+            },
+            smallIcon: 'ic_launcher',
+            sound: 'default',
+            vibrationPattern: [300, 500],
+          },
+          ios: {
+            sound: 'default',
+          },
+          data: remoteMessage.data,
+        });
+        
+        console.log('Arka plan bildirimi başarıyla gösterildi');
+      }
+    } catch (error) {
+      console.error('Arka plan bildirimi gösterilirken hata:', error);
+    }
   });
 };
 
@@ -88,10 +119,41 @@ export const checkInitialNotification = async () => {
 export const configureCombinedNotifications = () => {
   // FCM'den gelen bildirimleri Notifee aracılığıyla göster
   messaging().onMessage(async (message) => {
-    if (message && message.notification) {
-      const { title, body } = message.notification;
-      // Burada Notifee'ye bildirim gösterme isteği gönderilebilir
-      // Özel bildirim gösterme işlemleri için notifee.displayNotification kullanılabilir
+    console.log('Ön planda FCM bildirimi alındı:', message);
+    
+    if (message && (message.notification || message.data)) {
+      try {
+        const channelId = await createNotificationChannel();
+        
+        await notifee.displayNotification({
+          title: message.notification?.title || 'Cebimde Bildirimi',
+          body: message.notification?.body || 'Yeni bir bildiriminiz var',
+          android: {
+            channelId: 'payment_reminders',
+            importance: AndroidImportance.HIGH,
+            pressAction: {
+              id: 'default',
+            },
+            smallIcon: 'ic_launcher',
+            sound: 'default',
+            vibrationPattern: [300, 500],
+          },
+          ios: {
+            sound: 'default',
+            foregroundPresentationOptions: {
+              badge: true,
+              sound: true,
+              banner: true,
+              list: true,
+            },
+          },
+          data: message.data,
+        });
+        
+        console.log('FCM bildirimi başarıyla gösterildi');
+      } catch (error) {
+        console.error('FCM bildirimi gösterilirken hata:', error);
+      }
     }
   });
 };

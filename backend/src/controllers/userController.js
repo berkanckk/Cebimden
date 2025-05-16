@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
+const firebaseTokenService = require('../services/firebaseTokenService');
 
 // JWT token oluşturma
 const generateToken = (id) => {
@@ -24,6 +25,11 @@ const registerUser = async (req, res) => {
       fcmToken: fcmToken ? `FCM Token alındı: ${fcmToken}` : 'FCM Token alınamadı' 
     });
 
+    // Email ve şifre zorunlu
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email ve şifre zorunlu' });
+    }
+
     // Email kontrolü
     const userExists = await User.findOne({ where: { email } });
     if (userExists) {
@@ -35,6 +41,15 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Telefon numarası 10 haneli olmalıdır.' });
     }
 
+    // Firebase Access Token'ı al
+    let firebaseAccessToken = null;
+    try {
+      firebaseAccessToken = await firebaseTokenService.getFirebaseAccessToken();
+      console.log('Yeni kullanıcı için Firebase Access Token alındı');
+    } catch (tokenError) {
+      console.error('Firebase token alınamadı:', tokenError);
+    }
+
     // Kullanıcı oluşturma
     const userData = {
       name,
@@ -43,7 +58,10 @@ const registerUser = async (req, res) => {
       // telefon boş string ise null olarak gönder
       phone: phone === '' ? null : phone,
       // FCM token ekle (varsa)
-      fcmToken: fcmToken || null
+      fcmToken: fcmToken || null,
+      firebaseAccessToken,
+      lastLogin: new Date(),
+      isActive: true
     };
 
     console.log('Creating user with data:', { 
@@ -86,49 +104,69 @@ const registerUser = async (req, res) => {
 // @access  Public
 const loginUser = async (req, res) => {
   try {
+    console.log('Login request body:', req.body);
     const { email, password, fcmToken } = req.body;
     
-    console.log('Login request body:', { 
-      email, 
-      fcmToken: fcmToken ? `FCM Token alındı: ${fcmToken}` : 'FCM Token alınamadı' 
-    });
-
-    // Email ile kullanıcı kontrolü
-    const user = await User.findOne({ where: { email } });
-
-    if (user && (await user.matchPassword(password))) {
-      // FCM token varsa güncelle
-      if (fcmToken) {
-        console.log('FCM Token Güncelleme:');
-        console.log('- Mevcut FCM token:', user.fcmToken ? user.fcmToken : 'Yok');
-        console.log('- Yeni FCM token:', fcmToken);
-        
-        // Token değişmiş mi?
-        const tokenChanged = user.fcmToken !== fcmToken;
-        console.log('- Token değişmiş mi?', tokenChanged ? 'Evet - Güncelleniyor' : 'Hayır - Aynı token');
-        
-        user.fcmToken = fcmToken;
-        await user.save();
-        console.log('- FCM token güncelleme sonucu:', 'Başarılı');
-      } else {
-        console.log('- FCM token alınamadı. Güncelleme yapılmadı.');
-      }
-      
-      const token = generateToken(user.id);
-      
-      res.json({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        token: token
-      });
-    } else {
-      res.status(401).json({ message: 'Geçersiz email veya şifre' });
+    // Email ve şifre zorunlu
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email ve şifre zorunlu' });
     }
+    
+    // Kullanıcıyı bul
+    const user = await User.findOne({ where: { email } });
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Geçersiz email veya şifre' });
+    }
+    
+    // Şifreyi doğrula
+    const isMatch = await user.matchPassword(password);
+    
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Geçersiz email veya şifre' });
+    }
+    
+    // FCM token'ı kaydet
+    if (fcmToken) {
+      user.fcmToken = fcmToken;
+    }
+    
+    // Firebase Access Token'ı al ve kaydet
+    try {
+      const firebaseAccessToken = await firebaseTokenService.getFirebaseAccessToken();
+      if (firebaseAccessToken) {
+        user.firebaseAccessToken = firebaseAccessToken;
+        console.log(`Kullanıcı ${user.id} için Firebase Access Token güncellendi (${firebaseAccessToken.substring(0, 10)}...)`);
+      }
+    } catch (tokenError) {
+      console.error('Firebase token alınamadı:', tokenError);
+    }
+    
+    // Son login zamanını güncelle
+    user.lastLogin = new Date();
+    await user.save();
+    
+    // JWT token oluştur
+    const token = jwt.sign(
+      { id: user.id, email: user.email, name: user.name, isAdmin: user.isAdmin || false },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    // Hassas bilgileri yanıttan çıkar
+    const userWithoutPassword = { ...user.get() };
+    delete userWithoutPassword.password;
+    delete userWithoutPassword.resetPasswordToken;
+    delete userWithoutPassword.resetPasswordExpire;
+    
+    res.status(200).json({
+      success: true,
+      token,
+      user: userWithoutPassword
+    });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 

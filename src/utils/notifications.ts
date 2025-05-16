@@ -39,32 +39,41 @@ export const schedulePaymentNotification = async (
     const paymentDateTrigger = new Date(paymentDate);
     paymentDateTrigger.setHours(9, 0, 0, 0); // Sabah 9:00'da bildirim
     
-    await notifee.createTriggerNotification(
-      {
-        id: `payment-${paymentId}`,
-        title: title,
-        body: body,
-        android: {
-          channelId: channelId || 'payment_reminders',
-          importance: AndroidImportance.HIGH,
-          pressAction: {
-            id: 'default',
+    // Şimdiki zamanı al
+    const now = new Date();
+    
+    // Eğer bildirim zamanı geçmişte kaldıysa, bildirimi oluşturma
+    if (paymentDateTrigger.getTime() <= now.getTime()) {
+      console.log('Bildirim zamanı geçmiş, ödeme günü bildirimi oluşturulmadı:', paymentId);
+    } else {
+      // Bildirim zamanı gelecekte, bildirimi oluştur
+      await notifee.createTriggerNotification(
+        {
+          id: `payment-${paymentId}`,
+          title: title,
+          body: body,
+          android: {
+            channelId: channelId || 'payment_reminders',
+            importance: AndroidImportance.HIGH,
+            pressAction: {
+              id: 'default',
+            },
+            smallIcon: 'ic_launcher', // Android manifest'te tanımlı olmalı
           },
-          smallIcon: 'ic_launcher', // Android manifest'te tanımlı olmalı
+          ios: {
+            sound: 'default',
+          },
+          data: {
+            paymentId,
+            type: 'payment',
+          },
         },
-        ios: {
-          sound: 'default',
-        },
-        data: {
-          paymentId,
-          type: 'payment',
-        },
-      },
-      {
-        type: TriggerType.TIMESTAMP,
-        timestamp: paymentDateTrigger.getTime(),
-      }
-    );
+        {
+          type: TriggerType.TIMESTAMP,
+          timestamp: paymentDateTrigger.getTime(),
+        }
+      );
+    }
     
     // Ödeme gününden bir gün önce hatırlatma (isteğe bağlı)
     if (sendDayBefore) {
@@ -72,32 +81,37 @@ export const schedulePaymentNotification = async (
       dayBeforeTrigger.setDate(dayBeforeTrigger.getDate() - 1);
       dayBeforeTrigger.setHours(18, 0, 0, 0); // Akşam 6:00'da bildirim
       
-      await notifee.createTriggerNotification(
-        {
-          id: `payment-reminder-${paymentId}`,
-          title: 'Ödeme Hatırlatıcısı',
-          body: `Yarın ödemeniz var: ${title}`,
-          android: {
-            channelId: channelId || 'payment_reminders',
-            importance: AndroidImportance.HIGH,
-            pressAction: {
-              id: 'default',
+      // Eğer bir gün önceki bildirim zamanı geçmişse, oluşturma
+      if (dayBeforeTrigger.getTime() <= now.getTime()) {
+        console.log('Bildirim zamanı geçmiş, bir gün önceki hatırlatma oluşturulmadı:', paymentId);
+      } else {
+        await notifee.createTriggerNotification(
+          {
+            id: `payment-reminder-${paymentId}`,
+            title: 'Ödeme Hatırlatıcısı',
+            body: `Yarın ödemeniz var: ${title}`,
+            android: {
+              channelId: channelId || 'payment_reminders',
+              importance: AndroidImportance.HIGH,
+              pressAction: {
+                id: 'default',
+              },
+              smallIcon: 'ic_launcher',
             },
-            smallIcon: 'ic_launcher',
+            ios: {
+              sound: 'default',
+            },
+            data: {
+              paymentId,
+              type: 'payment_reminder',
+            },
           },
-          ios: {
-            sound: 'default',
-          },
-          data: {
-            paymentId,
-            type: 'payment_reminder',
-          },
-        },
-        {
-          type: TriggerType.TIMESTAMP,
-          timestamp: dayBeforeTrigger.getTime(),
-        }
-      );
+          {
+            type: TriggerType.TIMESTAMP,
+            timestamp: dayBeforeTrigger.getTime(),
+          }
+        );
+      }
     }
     
     return true;

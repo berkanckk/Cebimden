@@ -2,6 +2,7 @@ const { User, Payment } = require('../models');
 const { sendNotificationToDevice, getGoogleAccessToken } = require('../utils/firebaseAdmin');
 const { Op } = require('sequelize');
 const tokenStore = require('../utils/tokenStore');
+const { testPaymentReminders } = require('../scheduler/notificationScheduler');
 
 // Firebase Access Token'ı alma - Sadece admin kullanıcılar için
 const getAccessToken = async (req, res) => {
@@ -230,9 +231,33 @@ const sendReminderForUpcomingPayments = async (req, res) => {
   }
 };
 
+// Zamanlanmış bildirimleri test etme - doğrudan scheduler'ı çağırır
+const testPaymentNotifications = async (req, res) => {
+  try {
+    // Admin kontrolü
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ message: 'Yetkisiz erişim' });
+    }
+    
+    console.log(`Admin ${req.user.id} (${req.user.email}) zamanlanmış bildirim testini tetikledi`);
+    
+    // Scheduler'ın test fonksiyonunu çağır
+    const result = await testPaymentReminders();
+    
+    res.status(200).json({
+      message: 'Zamanlanmış bildirim testi çalıştırıldı',
+      result
+    });
+  } catch (error) {
+    console.error('Zamanlanmış bildirim testi hatası:', error);
+    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+  }
+};
+
 module.exports = {
   getAccessToken,
   sendNotificationToAllUsers,
   sendNotificationToUser,
-  sendReminderForUpcomingPayments
+  sendReminderForUpcomingPayments,
+  testPaymentNotifications
 }; 

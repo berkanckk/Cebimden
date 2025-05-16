@@ -288,9 +288,9 @@ const DashboardScreen = () => {
         />
         <View style={styles.headerContent}>
           <View style={styles.headerTopRow}>
-          <View style={styles.welcomeContainer}>
-            <Text style={styles.welcomeText}>Merhaba,</Text>
-            <Text style={styles.userName}>{user?.name || 'Kullanıcı'}</Text>
+            <View style={styles.welcomeContainer}>
+              <Text style={styles.welcomeText}>Merhaba,</Text>
+              <Text style={styles.userName}>{user?.name || 'Kullanıcı'}</Text>
             </View>
             <View style={styles.headerRightIcons}>
               <TouchableOpacity 
@@ -313,8 +313,8 @@ const DashboardScreen = () => {
           <Text style={styles.dashboardTitle}>Ödeme Takip</Text>
           
           <View style={styles.statRow}>
-          <View style={styles.statContainer}>
-            <View style={styles.statBox}>
+            <View style={styles.statContainer}>
+              <View style={styles.statBox}>
                 <View style={{
                   width: 36, 
                   height: 36, 
@@ -327,14 +327,14 @@ const DashboardScreen = () => {
                   <Icon name="clock" size={22} color="#FFFFFF" />
                 </View>
                 <View>
-              <Text style={styles.statTitle}>Yaklaşan</Text>
-              <Text style={styles.statValue}>{upcomingPayments.length}</Text>
+                  <Text style={styles.statTitle}>Yaklaşan</Text>
+                  <Text style={styles.statValue}>{upcomingPayments.length}</Text>
                 </View>
-            </View>
-            
-            <View style={styles.statDivider} />
-            
-            <View style={styles.statBox}>
+              </View>
+              
+              <View style={styles.statDivider} />
+              
+              <View style={styles.statBox}>
                 <View style={{
                   width: 36, 
                   height: 36, 
@@ -347,7 +347,7 @@ const DashboardScreen = () => {
                   <Icon name="money" size={22} color="#FFFFFF" />
                 </View>
                 <View>
-              <Text style={styles.statTitle}>Bu Ay</Text>
+                  <Text style={styles.statTitle}>Bu Ay</Text>
                   <Text style={styles.statValue}>{totalThisMonth.toFixed(0)} ₺</Text>
                 </View>
               </View>
